@@ -34,6 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
   videoFile?.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) {
+      videoEl.style.display = "block";
       videoEl.src = URL.createObjectURL(file);
       startTime = 0;
       timestamp.textContent = `0s`;
