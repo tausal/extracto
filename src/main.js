@@ -6,10 +6,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const videoFile = document.querySelector("#videoFile");
   const videoEl = document.getElementById("video");
   const canvasEl = document.querySelector("#canvas");
-  const timestamp = document.querySelector("#timestamp");
   const statusEl = document.querySelector("#status");
   const framesContainer = document.getElementById("frames");
-  const frameCountInput = document.getElementById("frameCount");
+  // const frameCountInput = document.getElementById("frameCount");
   const frameIntervalInput = document.getElementById("frameInterval");
   const extractBtn = document.querySelector("#extractBtn");
   const optionsSection = document.querySelector(".options");
@@ -17,6 +16,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const downloadZipButton = actionsSection.querySelector("#downloadZip");
   const downloadSelectedButton =
     actionsSection.querySelector("#downloadSelected");
+  const rangeStartInput = document.getElementById("rangeStart");
+  const rangeEndInput = document.getElementById("rangeEnd");
 
   const lightbox = document.getElementById("lightbox");
   const lightboxImg = document.getElementById("lightboxImg");
@@ -25,11 +26,11 @@ window.addEventListener("DOMContentLoaded", () => {
   const closeBtn = document.getElementById("closeBtn");
   const downloadCurrent = document.getElementById("downloadCurrent");
 
-  let startTime = 0;
-  optionsSection.style.display = "none";
-
   const frameBlobs = [];
+
   let currentIndex = 0;
+
+  optionsSection.style.display = "none";
 
   videoFile?.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -37,7 +38,6 @@ window.addEventListener("DOMContentLoaded", () => {
       videoEl.style.display = "block";
       videoEl.src = URL.createObjectURL(file);
       startTime = 0;
-      timestamp.textContent = `0s`;
       framesContainer.innerHTML = "";
       statusEl.textContent = "";
       optionsSection.style.display = "block";
@@ -46,7 +46,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   videoEl.addEventListener("pause", () => {
     startTime = videoEl.currentTime;
-    timestamp.textContent = `${startTime.toFixed(2)}s`;
   });
 
   extractBtn?.addEventListener("click", async () => {
@@ -55,13 +54,16 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const frameCount = parseInt(frameCountInput.value);
+    const endTime = parseFloat(rangeEndInput.value);
+    let startTime = parseFloat(rangeStartInput.value);
+
+    // const frameCount = parseInt(frameCountInput.value);
     const interval = parseFloat(frameIntervalInput.value);
 
-    if (frameCount <= 0 || interval <= 0) {
-      alert("Are you joking with these input values? Put a proper value.");
-      return;
-    }
+    // if (frameCount <= 0 || interval <= 0) {
+    //   alert("Are you joking with these input values? Put a proper value.");
+    //   return;
+    // }
 
     framesContainer.innerHTML = "";
     actionsSection.style.display = "flex";
@@ -74,24 +76,25 @@ window.addEventListener("DOMContentLoaded", () => {
     const duration = videoEl.duration;
 
     // for (let t = startTime; t < duration; t += 1 / frameRate) {
-    for (let i = 0; i < frameCount; i++) {
+    // for (let i = 0; i < frameCount; i++) {
+    for (let i = startTime; i < endTime; i = i+interval) {
       const t = startTime + i * interval;
-      if (t > duration) break;
+        if (t > duration) break;
 
       await new Promise((res) => {
-        videoEl.currentTime = t;
         videoEl.onseeked = async () => {
           ctx?.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
           const blob = await new Promise((r) =>
             canvasEl.toBlob(r, "image/png")
           );
           const url = URL.createObjectURL(blob);
-          const fileName = `frame_${Math.floor(t * 1000)}ms.png`;
+          const fileName = `frame_${Math.floor(i * 1000)}ms.png`;
           frameBlobs.push({ fileName, blob, url });
           addFramePreview(fileName, url);
-          statusEl.textContent = `Extracted ${i + 1}/${frameCount}`;
+          // statusEl.textContent = `Extracted ${i + 1}/${frameCount}`;
           res();
         };
+        videoEl.currentTime = i;
       });
     }
 
@@ -109,6 +112,7 @@ window.addEventListener("DOMContentLoaded", () => {
         : frameBlobs;
 
       if (selectedFrames.length === 0) {
+        downloadSelectedButton.disabled = true;
         alert("No frames selected.");
         return;
       }
@@ -190,7 +194,7 @@ window.addEventListener("DOMContentLoaded", () => {
   closeBtn.addEventListener("click", closeLightbox);
   downloadCurrent.addEventListener("click", () => {
     const a = document.createElement("a");
-    a.href = frameBlobs[currentIndex];
+    a.href = frameBlobs[currentIndex].url;
     a.download = `frame_${currentIndex}.png`;
     a.click();
   });
